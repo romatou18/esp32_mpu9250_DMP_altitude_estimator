@@ -33,7 +33,8 @@ values.
 
 #define ALTI_ESTIMATOR true // enable altitude estimator
 #define DEBUG_ENABLE true
-#define CALIB_BARO true // baro dynamic calibration for base initial height compensation i.e current pressure at current altitude now.
+#define DEBUG_BARO false
+#define CALIB_BARO false // baro dynamic calibration for base initial height compensation i.e current pressure at current altitude now.
 #define USE_EWMA true // use rolling exponential average filter on the barometer
 
 #define SDA_WIRE0 21
@@ -42,7 +43,7 @@ values.
 
 #define SDA_WIRE1 27
 #define SCL_WIRE1 26
-#define FREQ_WIRE1 400000L
+#define FREQ_WIRE1 100000L
 
 constexpr float GROUND_ALTI = 177.86;
 constexpr float GROUND_PRESSURE = 992.07;
@@ -71,7 +72,8 @@ typedef struct {
   float pf;
   float a;
   float af;
-} baro_reading_t;
+} baro_reading_t; 
+
 unsigned char hp206_available = 0;
 
 #define TAG_MAIN "main"
@@ -104,8 +106,11 @@ grove::KalmanFilter t_filter;    //temperature filter
 grove::KalmanFilter p_filter;    //pressure filter
 grove::KalmanFilter a_filter;    //altitude filter
 
-float pastTime = millis();
+float pastTime_mpu = millis();
+float pastTime_baro = millis();
 float currentTime = millis();
+float currentTime_baro = millis();
+
 
 
 MPU9250_DMP imu;
@@ -168,7 +173,6 @@ static void calibrate(float pressure)
 void getPressure(baro_reading_t& read)
 {
   float pi =0.0;
-  char display[40];
   if(OK_HP20X_DEV == ret)
   { 
 
@@ -194,7 +198,7 @@ void getPressure(baro_reading_t& read)
     auto af2 = baroFilter2.filter(a);
     read.af = af2;
   #if DEBUG_ENABLE
-    Serial.printf("Raw Alti=%.3f, Filter1=%.3f, Filter2=%.3f", read.a, af, af2);
+    Serial.printf("Raw Alti=%.3f, Filter1=%.3f, Filter2=%.3f\n", read.a, af, af2);
   #endif
 
 #else
@@ -202,9 +206,7 @@ void getPressure(baro_reading_t& read)
     read.af = af;
 #endif
   
-
-
-#if DEBUG_ENABLE
+#if DEBUG_BARO
 	  Serial.println(F("------------------\n"));
     Serial.println(F("Temper:"));
 	  Serial.print(t);	  
@@ -344,15 +346,15 @@ void setup()
   }
   while (Serial.available() && Serial.read()); // empty buffer again
 
-  Wire = TwoWire(0);
-  Wire1 = TwoWire(1);
+  // Wire = TwoWire(0);
+  // Wire1 = TwoWire(1);
   delay(200);
 
-  Wire1.begin(SDA_WIRE1, SCL_WIRE1, FREQ_WIRE1);
-  scanner(Wire1);
+  // Wire1.begin(SDA_WIRE1, SCL_WIRE1, FREQ_WIRE1);
+  // scanner(Wire1);
 
-  Wire.begin(SDA_WIRE0, SCL_WIRE0, FREQ_WIRE0);
-  scanner(Wire);
+  // Wire.begin(SDA_WIRE0, SCL_WIRE0, FREQ_WIRE0);
+  // scanner(Wire);
 
   pinMode(mpu_int_pin, INPUT);
   digitalWrite(mpu_int_pin, LOW);
@@ -360,9 +362,9 @@ void setup()
   init_sensors();
 
   // Call imu.begin() to verify communication and initialize
-  if (imu.begin(SDA_WIRE0, SCL_WIRE0, FREQ_WIRE0) != INV_SUCCESS)
+  if (imu.begin(SDA_WIRE0, SCL_WIRE0) != INV_SUCCESS)
   {
-    while (imu.begin(SDA_WIRE0, SCL_WIRE0, FREQ_WIRE0) != INV_SUCCESS)
+    while (imu.begin(SDA_WIRE0, SCL_WIRE0) != INV_SUCCESS)
     {
       SerialPort.println("Unable to communicate with MPU-9250");
       SerialPort.println("Check connections, and try again.");
@@ -416,7 +418,6 @@ void setup()
   // accelerometer in low-power mode to estimate quat's.
   // DMP_FEATURE_LP_QUAT and 6X_LP_QUAT are mutually exclusive
   SerialPort.printf("MPU-9250 DMP ok DMP fifo rate = %d\n", DMP_FIFO_RATE);
-
   delay(3000);
 
 //csv header
@@ -474,7 +475,15 @@ void loop()
   currentTime = millis();
   unsigned long dmp_timestamp = 0; // DMP timestamp
 
-  if ((currentTime - pastTime) > 100)
+  currentTime_baro = millis();
+  static baro_reading_t r;
+  if ((currentTime_baro - pastTime_baro) > 50)
+  {
+    getPressure(r);
+    pastTime_baro = currentTime_baro;
+  }
+
+  if ((currentTime - pastTime_mpu) > 100)
   {
     // Check for new data in the FIFO
     if ( imu.fifoAvailable() )
@@ -487,9 +496,6 @@ void loop()
         // quaternion values -- to estimate roll, pitch, and yaw
         // imu.computeEulerAngles();
         imu.update(UPDATE_COMPASS);
-
-        baro_reading_t r; 
-        getPressure(r);
 
         float alti = r.af - groundAltitude;
     #if DEBUG_ENABLE
@@ -547,7 +553,7 @@ void loop()
       }
     }
 
-    pastTime = currentTime;
+    pastTime_mpu = currentTime;
   }
 }
 
