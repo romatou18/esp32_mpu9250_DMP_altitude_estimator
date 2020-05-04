@@ -31,10 +31,18 @@ values.
 #include "esp_sleep.h"
 #include "FreeRTOS.h"
 
-#define ALTI_ESTIMATOR false
+#define ALTI_ESTIMATOR true // enable altitude estimator
 #define DEBUG_ENABLE true
-#define CALIBRATE false // baro
-#define USE_EWMA true
+#define CALIB_BARO true // baro dynamic calibration for base initial height compensation i.e current pressure at current altitude now.
+#define USE_EWMA true // use rolling exponential average filter on the barometer
+
+#define SDA_WIRE0 21
+#define SCL_WIRE0 22
+#define FREQ_WIRE0 400000L
+
+#define SDA_WIRE1 27
+#define SCL_WIRE1 26
+#define FREQ_WIRE1 400000L
 
 constexpr float GROUND_ALTI = 177.86;
 constexpr float GROUND_PRESSURE = 992.07;
@@ -46,14 +54,6 @@ static void espDelay(int ms)
     esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH,ESP_PD_OPTION_ON);
     esp_light_sleep_start();
 }
-
-#define SDA_WIRE0 21
-#define SCL_WIRE0 22
-#define FREQ_WIRE0 400000L
-
-#define SDA_WIRE1 27
-#define SCL_WIRE1 26
-#define FREQ_WIRE1 400000L
 
 HP20x_dev HP20x(1, SDA_WIRE1, SCL_WIRE1, FREQ_WIRE1);
 
@@ -81,7 +81,6 @@ unsigned char hp206_available = 0;
 baro_reading_t g_baro_latest;
 
 #define SerialPort Serial
-
 #define DEBUG(format) SerialPort.printf(format, __FILE__, __LINE__)
 
 #ifdef OUTPUT_READABLE_YAWPITCHROLL
@@ -89,6 +88,8 @@ float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gra
 #endif
 
 // Altitude estimator
+// the higher the sigma/ std deviation the least the estimator is reliant on the sensor.
+// Note: disable the debug to use ARduino serial plotter for visualising the output of the estimator.
 static AltitudeEstimator altitude = AltitudeEstimator(
   0.000355, // sigma Accel 0.000354660293112
   0.000206, // sigma Gyro 0.000206332998559
@@ -296,7 +297,7 @@ void init_sensors()
       history[k] = 0;
   }
 
-  #if CALIBRATE
+  #if CALIB_BARO
   // calibrate barometer
   uint32_t count = 0;
   while (count < endCalibration) 
@@ -346,13 +347,12 @@ void setup()
   Wire = TwoWire(0);
   Wire1 = TwoWire(1);
   delay(200);
-  
+
   Wire1.begin(SDA_WIRE1, SCL_WIRE1, FREQ_WIRE1);
   scanner(Wire1);
 
   Wire.begin(SDA_WIRE0, SCL_WIRE0, FREQ_WIRE0);
   scanner(Wire);
-
 
   pinMode(mpu_int_pin, INPUT);
   digitalWrite(mpu_int_pin, LOW);
@@ -533,7 +533,7 @@ void loop()
     #endif
 
     #if ALTI_ESTIMATOR == true
-        altitude.estimate(accelDataGPerSec, gyroDataRadPerSec, alti, timestamp);
+        altitude.estimate(accelDataGPerSec, gyroDataRadPerSec, alti, dmp_timestamp);
         Serial.print(alti);
         Serial.print(" ");
         Serial.print(altitude.getAltitude());
