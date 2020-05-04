@@ -1,6 +1,12 @@
 Grove_barometer HP20x - modified by @romatou18, modified version to work on ESP32 and fixing a few issues with its initialisation.
 Note : temporary will create a fork of the original lib.
 ------------
+
+# ESP32 lib
+git clone https://github.com/romatou18/Grove_Barometer_HP20x
+
+
+# Original lib README
 ![](https://raw.githubusercontent.com/SeeedDocument/Grove-Barometer-High-Accuracy/master/img/Grove-Barometer-High-Accuracy.jpg)
 
 [Grove - Barometer (High-Accuracy)](https://www.seeedstudio.com/Grove-Barometer-%28High-Accuracy%29-p-1865.html)
