@@ -36,12 +36,12 @@ MPU9250_DMP::MPU9250_DMP()
 	_gSense = 0.0f;   // Updated after gyro FSR is set
 }
 
-inv_error_t MPU9250_DMP::begin(void)
+inv_error_t MPU9250_DMP::begin(int sda, int sdc, uint32_t freq)
 {
 	inv_error_t result;
     struct int_param_s int_param;
 	
-	Wire.begin();
+	Wire.begin(sda, sdc, freq);
 	
 	result = mpu_init(&int_param);
 	

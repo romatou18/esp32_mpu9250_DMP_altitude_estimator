@@ -47,21 +47,15 @@ static void espDelay(int ms)
     esp_light_sleep_start();
 }
 
-#define I2C_CTRL 1
-#if I2C_CTRL == 0
-#define WireInstance Wire
-#define SDA 21
-#define SCL 22
-#define FREQ 400000L
+#define SDA_WIRE0 21
+#define SCL_WIRE0 22
+#define FREQ_WIRE0 400000L
 
-#else 
-#define WireInstance Wire1
-#define SDA 27
-#define SCL 26
-#define FREQ 400000L
+#define SDA_WIRE1 27
+#define SCL_WIRE1 26
+#define FREQ_WIRE1 400000L
 
-#endif
-HP20x_dev HP20x(I2C_CTRL, SDA, SCL, FREQ);
+HP20x_dev HP20x(1, SDA_WIRE1, SCL_WIRE1, FREQ_WIRE1);
 
 #include <Ewma.h>
 Ewma baroFilter1(0.1);   // Less smoothing - faster to detect changes, but more prone to noise
@@ -348,13 +342,16 @@ void setup()
     delay(1500);
   }
   while (Serial.available() && Serial.read()); // empty buffer again
-   
-  WireInstance.begin(SDA, SCL, FREQ);
-  scanner(WireInstance);
-#if I2C_CTRL == 1
-  Wire.begin(21, 22, FREQ);
+
+  Wire = TwoWire(0);
+  Wire1 = TwoWire(1);
+  delay(200);
+  
+  Wire1.begin(SDA_WIRE1, SCL_WIRE1, FREQ_WIRE1);
+  scanner(Wire1);
+
+  Wire.begin(SDA_WIRE0, SCL_WIRE0, FREQ_WIRE0);
   scanner(Wire);
-#endif
 
 
   pinMode(mpu_int_pin, INPUT);
@@ -363,14 +360,14 @@ void setup()
   init_sensors();
 
   // Call imu.begin() to verify communication and initialize
-  if (imu.begin() != INV_SUCCESS)
+  if (imu.begin(SDA_WIRE0, SCL_WIRE0, FREQ_WIRE0) != INV_SUCCESS)
   {
-    while (1)
+    while (imu.begin(SDA_WIRE0, SCL_WIRE0, FREQ_WIRE0) != INV_SUCCESS)
     {
       SerialPort.println("Unable to communicate with MPU-9250");
       SerialPort.println("Check connections, and try again.");
       SerialPort.println();
-      delay(5000);
+      delay(2000);
     }
   }
 

@@ -93,7 +93,7 @@ public:
 	// LPF: 42 Hz
 	// FIFO: 50 Hz, disabled
 	// Output: INV_SUCCESS (0) on success, otherwise error
-	inv_error_t begin(void);
+	inv_error_t begin(int sda=-1, int sdc=-1, uint32_t freq=0U);
 	
 	// setSensors(unsigned char) -- Turn on or off MPU-9250 sensors. Any of the 
 	// following defines can be combined: INV_XYZ_GYRO, INV_XYZ_ACCEL, 
