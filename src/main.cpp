@@ -37,12 +37,12 @@ values.
 #define CALIB_BARO false // baro dynamic calibration for base initial height compensation i.e current pressure at current altitude now.
 #define USE_EWMA true // use rolling exponential average filter on the barometer
 
-#define SDA_WIRE0 21
-#define SCL_WIRE0 22
+constexpr int SDA_WIRE0 = 21;
+constexpr int SCL_WIRE0 = 22;
 #define FREQ_WIRE0 400000L
 
-#define SDA_WIRE1 27
-#define SCL_WIRE1 26
+constexpr int SDA_WIRE1 = 27;
+constexpr int SCL_WIRE1 = 26;
 #define FREQ_WIRE1 100000L
 
 constexpr float GROUND_ALTI = 177.86;
