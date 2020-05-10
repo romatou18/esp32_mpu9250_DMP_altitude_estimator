@@ -11,7 +11,7 @@
 /****************************************************************************/
 /***        Including Files                                               ***/
 /****************************************************************************/
-#include <Wire.h>
+#include <Wire.h> // Arduino TwoWire i2c lib
 #include <Arduino.h>
 /****************************************************************************/
 /***        Macro Definitions                                             ***/
@@ -72,7 +72,7 @@ typedef unsigned long   ulong;
 /***        Class Definitions                                             ***/
 /****************************************************************************/
 
-class HP20x_dev //: public TwoWire
+class HP20x_dev
 {
   /* Public variables and functions */
   public:
